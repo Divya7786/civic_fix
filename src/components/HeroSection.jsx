@@ -1,4 +1,4 @@
-import { ArrowRight, Map } from 'lucide-react';
+import { ArrowRight, Map, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import './HeroSection.css';
@@ -22,12 +22,11 @@ const HeroSection = ({ onOpenReport }) => {
             <button className="btn btn-primary btn-lg" onClick={onOpenReport}>
               Report an Issue Now
             </button>
-            {/* ✅ Now scrolls to the Live Map section */}
-            <a href="#live-map" className="btn btn-secondary btn-lg"
-              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-              <Map size={20} />
-              View Live Map
-            </a>
+            <button className="btn btn-secondary btn-lg" onClick={() => navigate('/signup')}
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+              <UserPlus size={20} />
+              Sign Up
+            </button>
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import HeroSection from './components/HeroSection';
 import ExplainerSection from './components/ExplainerSection';
 import StatsSection from './components/StatsSection';
 import FeaturesSection from './components/FeaturesSection';
+import SignUp from './components/SignUp';
 
 import { useState } from 'react';
 import './App.css';
@@ -33,6 +34,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home onOpenReport={() => setIsReportModalOpen(true)} />} />
         <Route path="/map" element={<LiveMap />} />
+        <Route path="/signup" element={<SignUp />} />
       </Routes>
 
       <Footer />
