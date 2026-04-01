@@ -22,25 +22,16 @@ const HeroSection = ({ onOpenReport }) => {
             <button className="btn btn-primary btn-lg" onClick={onOpenReport}>
               Report an Issue Now
             </button>
-            <button
-              className="btn btn-secondary btn-lg"
-              onClick={() => navigate('/map')}
-            >
-              <Map size={20} style={{ marginRight: '8px' }} />
+            {/* ✅ Now scrolls to the Live Map section */}
+            <a href="#live-map" className="btn btn-secondary btn-lg"
+              style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+              <Map size={20} />
               View Live Map
-            </button>
+            </a>
           </div>
         </div>
 
         <div className="hero-visual animate-fade-in-delay-1">
-          <div className="hero-card float-1">
-            <div className="card-icon">!</div>
-            <div>
-              <strong>Pothole Fixed</strong>
-              <span>2 hours ago</span>
-            </div>
-          </div>
-          
           <div className="hero-image-wrapper">
              <div className="mockup-frame">
               <div className="mockup-header">
@@ -55,13 +46,21 @@ const HeroSection = ({ onOpenReport }) => {
                 <div className="mockup-bar short"></div>
               </div>
             </div>
-          </div>
 
-          <div className="hero-card float-2">
-            <div className="card-icon bg-green">✓</div>
-            <div>
-              <strong>Garbage Cleared</strong>
-              <span>Just now</span>
+            <div className="hero-card float-1 animate-fade-in-delay-2">
+              <div className="card-icon"><Map size={18} /></div>
+              <div>
+                <strong>Water Leak Reported</strong>
+                <span>2 mins ago</span>
+              </div>
+            </div>
+
+            <div className="hero-card float-2 animate-fade-in-delay-2">
+              <div className="card-icon bg-green"><ArrowRight size={18} /></div>
+              <div>
+                <strong>Streetlight Fixed</strong>
+                <span>In your area</span>
+              </div>
             </div>
           </div>
         </div>

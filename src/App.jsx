@@ -17,6 +17,7 @@ function Home({ onOpenReport }) {
     <main>
       <HeroSection onOpenReport={onOpenReport} />
       <ExplainerSection />
+      <LiveMap />
       <StatsSection />
       <FeaturesSection />
     </main>
@@ -41,6 +42,7 @@ function App() {
         onClose={() => setIsReportModalOpen(false)}
       />
     </Router>
+
   );
 }
 

@@ -11,7 +11,6 @@ const Navbar = ({ onOpenReport }) => {
         </a>
         <div className="nav-links">
           <a href="#" className="nav-link">Platform</a>
-          <a href="/map" className="nav-link">Live Map</a>
           <a href="#live-map" className="nav-link">Live Map</a>  {/* ✅ scrolls to map */}
           <a href="#" className="nav-link">Community</a>
         </div>
