@@ -1,18 +1,20 @@
 import { MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import './Navbar.css';
 
 const Navbar = ({ onOpenReport }) => {
   return (
     <nav className="navbar">
       <div className="container nav-container">
-        <a href="/" className="logo">
+        <Link to="/" className="logo">
           <MapPin className="logo-icon" size={28} />
           <span className="logo-text">CivicFix</span>
-        </a>
+        </Link>
         <div className="nav-links">
-          <a href="#" className="nav-link">Platform</a>
-          <a href="#live-map" className="nav-link">Live Map</a>  {/* ✅ scrolls to map */}
-          <a href="#" className="nav-link">Community</a>
+          <Link to="/" className="nav-link">Home</Link>
+          <Link to="/map" className="nav-link">Live Map</Link>
+          <Link to="/track" className="nav-link">Track</Link>
+          <Link to="/admin" className="nav-link">Admin</Link>
         </div>
         <div className="nav-actions">
           <button className="btn btn-primary nav-btn" onClick={onOpenReport}>

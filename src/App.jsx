@@ -7,6 +7,8 @@ import ExplainerSection from './components/ExplainerSection';
 import StatsSection from './components/StatsSection';
 import FeaturesSection from './components/FeaturesSection';
 import SignUp from './components/SignUp';
+import TrackComplaint from './components/TrackComplaint';
+import AdminDashboard from './components/AdminDashboard';
 
 import { useState } from 'react';
 import './App.css';
@@ -35,6 +37,8 @@ function App() {
         <Route path="/" element={<Home onOpenReport={() => setIsReportModalOpen(true)} />} />
         <Route path="/map" element={<LiveMap />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/track" element={<TrackComplaint />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
 
       <Footer />

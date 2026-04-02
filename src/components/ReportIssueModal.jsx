@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { X, Upload, CheckCircle, MapPin } from 'lucide-react';
 import './ReportIssueModal.css';
 
+const API_URL = 'http://localhost:3000/api';
+
 const geocodeAddress = async (area, city) => {
   const query = `${area}, ${city}`;
   const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
@@ -15,6 +17,8 @@ const geocodeAddress = async (area, city) => {
 const ReportIssueModal = ({ isOpen, onClose }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [issueId, setIssueId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -38,10 +42,8 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Generate issue ID
-    const id = '#' + Math.floor(10000 + Math.random() * 90000);
-    setIssueId(id);
+    setSubmitting(true);
+    setError(null);
 
     // Try to geocode the area + city into coordinates
     let position = null;
@@ -57,25 +59,64 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
 
     if (!position) {
       alert('Could not detect location. Please enter a valid Area/City or Google Maps link.');
+      setSubmitting(false);
       return;
     }
 
-    // Save to localStorage
-    const existing = JSON.parse(localStorage.getItem('civicfix_issues') || '[]');
-    const newIssue = {
-      id,
-      title: formData.issueType,
-      description: formData.description,
+    // Prepare complaint data for API
+    const complaintData = {
+      name: formData.fullName,
+      phone: formData.phone,
+      email: formData.email,
       area: formData.area,
       city: formData.city,
+      landmark: formData.landmark,
+      issueType: formData.issueType,
+      description: formData.description,
       severity: formData.severity,
-      status: 'Pending',
-      position,
-      submittedAt: new Date().toISOString(),
+      latitude: position[0],
+      longitude: position[1],
     };
-    localStorage.setItem('civicfix_issues', JSON.stringify([...existing, newIssue]));
 
-    setIsSubmitted(true);
+    try {
+      // Submit to backend API
+      const response = await fetch(`${API_URL}/complaints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(complaintData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to submit complaint');
+      }
+
+      // Set the complaint ID from the API response
+      setIssueId(data.data.complaintId);
+
+      // Also save to localStorage for LiveMap compatibility
+      const existing = JSON.parse(localStorage.getItem('civicfix_issues') || '[]');
+      const newIssue = {
+        id: data.data.complaintId,
+        title: data.data.issueType,
+        description: data.data.description,
+        area: data.data.area,
+        city: data.data.city,
+        severity: data.data.severity,
+        status: data.data.status,
+        position,
+        submittedAt: data.data.createdAt,
+      };
+      localStorage.setItem('civicfix_issues', JSON.stringify([...existing, newIssue]));
+
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+      alert(`Error submitting complaint: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -237,7 +278,18 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                   <input type="checkbox" required />
                   <span>I verify that the information provided is accurate and consent to its use for resolution purposes.</span>
                 </label>
-                <button type="submit" className="btn btn-primary btn-submit">Submit Report</button>
+                {error && (
+                  <div className="error-message" style={{ color: '#dc2626', marginBottom: '1rem' }}>
+                    Error: {error}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-submit"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Report'}
+                </button>
               </div>
             </form>
           </>
