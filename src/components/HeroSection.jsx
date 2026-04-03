@@ -2,9 +2,11 @@ import { ArrowRight, Map, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import './HeroSection.css';
+import { useAuth } from '../context/AuthContext';
 
 const HeroSection = ({ onOpenReport }) => {
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   return (
     <section className="hero">
@@ -19,7 +21,14 @@ const HeroSection = ({ onOpenReport }) => {
             Help make your neighborhood a better place by reporting local problems directly to the authorities. Together we can build a cleaner, safer community.
           </p>
           <div className="hero-cta">
-            <button className="btn btn-primary btn-lg" onClick={onOpenReport} data-guide-id="report-button">
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => {
+                if (token) onOpenReport();
+                else navigate('/signup');
+              }}
+              data-guide-id="report-button"
+            >
               Report an Issue Now
             </button>
             <button className="btn btn-secondary btn-lg" onClick={() => navigate('/signup')}

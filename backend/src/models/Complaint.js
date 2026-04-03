@@ -74,17 +74,23 @@ class Complaint {
      * @returns {Array} List of complaints
      */
     static async findAll(filters = {}) {
-        let query = 'SELECT * FROM complaints';
+        let query = `
+            SELECT
+                c.*,
+                COALESCE(u.name, c.name) AS reporter_name
+            FROM complaints c
+            LEFT JOIN users u ON u.id = c.user_id
+        `;
         const values = [];
         const conditions = [];
 
         if (filters.status) {
-            conditions.push(`status = $${values.length + 1}`);
+            conditions.push(`c.status = $${values.length + 1}`);
             values.push(filters.status);
         }
 
         if (filters.department) {
-            conditions.push(`department = $${values.length + 1}`);
+            conditions.push(`c.department = $${values.length + 1}`);
             values.push(filters.department);
         }
 
@@ -92,9 +98,55 @@ class Complaint {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY c.created_at DESC';
 
         const result = await pool.query(query, values);
+        return result.rows;
+    }
+
+    /**
+     * Get complaints for a specific user
+     * @param {number} userId
+     * @returns {Array}
+     */
+    static async findByUserId(userId) {
+        const query = `
+            SELECT
+                c.*,
+                COALESCE(u.name, c.name) AS reporter_name
+            FROM complaints c
+            LEFT JOIN users u ON u.id = c.user_id
+            WHERE c.user_id = $1
+            ORDER BY c.created_at DESC
+        `;
+        const result = await pool.query(query, [userId]);
+        return result.rows;
+    }
+
+    /**
+     * Get nearby complaints using Haversine distance
+     * Note: Uses duplicated placeholders (handled by our SQLite wrapper).
+     */
+    static async findNearby(lat, lng, radiusKm = 10) {
+        const query = `
+            SELECT * FROM (
+                SELECT
+                    c.*,
+                    COALESCE(u.name, c.name) AS reporter_name,
+                    (6371 * acos(
+                        cos(radians($1)) * cos(radians(c.latitude)) *
+                        cos(radians(c.longitude) - radians($2)) +
+                        sin(radians($1)) * sin(radians(c.latitude))
+                    )) AS distance_km
+                FROM complaints c
+                LEFT JOIN users u ON u.id = c.user_id
+                WHERE c.latitude IS NOT NULL AND c.longitude IS NOT NULL
+            ) sub
+            WHERE distance_km <= $3
+            ORDER BY distance_km ASC
+            LIMIT 200
+        `;
+        const result = await pool.query(query, [lat, lng, radiusKm]);
         return result.rows;
     }
 

@@ -17,25 +17,34 @@ const pool = {
     query: async (text, params = []) => {
         try {
             // Convert PostgreSQL style parameters ($1, $2) to SQLite style (?)
-            const sqliteText = text.replace(/\$\d+/g, '?');
+            // Our codebase sometimes reuses the same placeholder multiple times (e.g. $1 in both cos/sin).
+            // When we replace with '?', we must also expand `params` to match each '?' occurrence.
+            const placeholderRegex = /\$(\d+)/g;
+            const expandedParams = [];
+            const sqliteText = text.replace(placeholderRegex, (match, p1) => {
+                const idx = Number(p1) - 1;
+                expandedParams.push(params[idx]);
+                return '?';
+            });
+            const finalParams = expandedParams.length > 0 ? expandedParams : params;
             
             const stmt = db.prepare(sqliteText);
             
             // For SELECT queries
             if (sqliteText.trim().toUpperCase().startsWith('SELECT')) {
-                const rows = stmt.all(params);
+                const rows = stmt.all(finalParams);
                 return { rows, rowCount: rows.length };
             }
             
             // For INSERT/UPDATE/DELETE with RETURNING
             if (sqliteText.toUpperCase().includes('RETURNING')) {
                 // SQLite 3.35+ supports RETURNING
-                const rows = stmt.all(params);
+                const rows = stmt.all(finalParams);
                 return { rows, rowCount: rows.length };
             }
             
             // For other operations (CREATE TABLE, etc.)
-            const result = stmt.run(params);
+            const result = stmt.run(finalParams);
             return { rows: [], rowCount: result.changes, lastInsertRowid: result.lastInsertRowid };
         } catch (err) {
             console.error('SQLite Query Error:', err);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     AlertCircle,
     CheckCircle,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import './AdminDashboard.css';
 
-const API_URL = 'http://localhost:3000/api';
+import { API_BASE } from '../services/api';
 
 const DEPARTMENTS = [
     'All Departments',
@@ -47,7 +47,7 @@ const AdminDashboard = () => {
     const [updating, setUpdating] = useState({});
 
     // Fetch complaints
-    const fetchComplaints = async () => {
+    const fetchComplaints = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
                 params.append('department', filters.department);
             }
 
-            const response = await fetch(`${API_URL}/complaints?${params}`);
+            const response = await fetch(`${API_BASE}/complaints?${params}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -73,18 +73,18 @@ const AdminDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
 
     useEffect(() => {
         fetchComplaints();
-    }, [filters]);
+    }, [fetchComplaints]);
 
     // Update complaint status
     const updateStatus = async (id, newStatus) => {
         setUpdating({ ...updating, [id]: true });
 
         try {
-            const response = await fetch(`${API_URL}/complaints/${id}`, {
+            const response = await fetch(`${API_BASE}/complaints/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -112,7 +112,7 @@ const AdminDashboard = () => {
         setUpdating({ ...updating, [id]: true });
 
         try {
-            const response = await fetch(`${API_URL}/assign`, {
+            const response = await fetch(`${API_BASE}/assign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ complaintId: id.toString(), department })

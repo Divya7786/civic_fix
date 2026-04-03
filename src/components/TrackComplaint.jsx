@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, AlertCircle, CheckCircle, Clock, MapPin, Phone, User, Calendar } from 'lucide-react';
 import './TrackComplaint.css';
 
-const API_URL = 'http://localhost:3000/api';
+import { API_BASE } from '../services/api';
 
 const TrackComplaint = () => {
     const [complaintId, setComplaintId] = useState('');
@@ -23,7 +23,7 @@ const TrackComplaint = () => {
         setComplaint(null);
 
         try {
-            const response = await fetch(`${API_URL}/complaints/${complaintId.trim()}`);
+            const response = await fetch(`${API_BASE}/complaints/${complaintId.trim()}`);
             const data = await response.json();
 
             if (!response.ok) {

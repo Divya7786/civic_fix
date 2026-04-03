@@ -1,7 +1,9 @@
 import { MapPin, Bell, ShieldCheck, Clock, CheckCircle } from 'lucide-react';
 import './FeaturesSection.css';
+import { useNavigate } from 'react-router-dom';
 
 const FeaturesSection = () => {
+  const navigate = useNavigate();
   const features = [
     {
       title: "Interactive Live Map",
@@ -51,7 +53,9 @@ const FeaturesSection = () => {
           <div className="feature-cta-card">
             <h3>Ready to make a difference?</h3>
             <p>Join thousands of citizens improving their neighborhoods today.</p>
-            <button className="btn btn-primary mt-10">Get Started Now</button>
+            <button className="btn btn-primary" onClick={() => navigate('/signup')}>
+              Get Started Now
+            </button>
           </div>
         </div>
 

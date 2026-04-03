@@ -16,7 +16,7 @@ const createComplaint = async (req, res, next) => {
         }
 
         // Create complaint (auto-generates ID and assigns department)
-        const complaint = await Complaint.create(complaintData);
+        const complaint = await Complaint.create(complaintData, req.user?.id || null);
 
         res.status(201).json({
             success: true,
@@ -33,6 +33,57 @@ const createComplaint = async (req, res, next) => {
                 department: complaint.department,
                 createdAt: complaint.created_at
             }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Get complaints created by the authenticated user
+ * GET /complaints/user
+ */
+const getComplaintsByUser = async (req, res, next) => {
+    try {
+        const complaints = await Complaint.findByUserId(req.user.id);
+        res.json({
+            success: true,
+            count: complaints.length,
+            data: complaints
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Get complaints within a radius (nearby dashboard)
+ * GET /complaints/nearby?lat=...&lng=...&radiusKm=...
+ */
+const getNearbyComplaints = async (req, res, next) => {
+    try {
+        const lat = Number(req.query.lat);
+        const lng = Number(req.query.lng);
+        const radiusKm = req.query.radiusKm ? Number(req.query.radiusKm) : 10;
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'lat and lng are required' }
+            });
+        }
+        if (Number.isNaN(radiusKm) || radiusKm <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'radiusKm must be a positive number' }
+            });
+        }
+
+        const complaints = await Complaint.findNearby(lat, lng, radiusKm);
+        res.json({
+            success: true,
+            count: complaints.length,
+            data: complaints
         });
     } catch (err) {
         next(err);
@@ -217,6 +268,8 @@ const deleteComplaint = async (req, res, next) => {
 
 module.exports = {
     createComplaint,
+    getComplaintsByUser,
+    getNearbyComplaints,
     getComplaintById,
     getAllComplaints,
     updateComplaintStatus,

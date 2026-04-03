@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { X, Upload, CheckCircle, MapPin } from 'lucide-react';
 import './ReportIssueModal.css';
-
-const API_URL = 'http://localhost:3000/api';
+import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../services/api';
 
 const geocodeAddress = async (area, city) => {
   const query = `${area}, ${city}`;
@@ -15,6 +15,7 @@ const geocodeAddress = async (area, city) => {
 };
 
 const ReportIssueModal = ({ isOpen, onClose }) => {
+  const { token } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [issueId, setIssueId] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -90,8 +91,10 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
 
     try {
       // Submit to backend API using FormData
-      const response = await fetch(`${API_URL}/complaints`, {
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const response = await fetch(`${API_BASE}/complaints`, {
         method: 'POST',
+        headers,
         body: formDataToSend,
       });
 
@@ -118,6 +121,9 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
         submittedAt: responseData.data.createdAt,
       };
       localStorage.setItem('civicfix_issues', JSON.stringify([...existing, newIssue]));
+
+      // Notify other pages (My Profile) to refresh immediately
+      window.dispatchEvent(new Event('civicfix:complaint-created'));
 
       setIsSubmitted(true);
     } catch (err) {

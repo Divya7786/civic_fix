@@ -3,12 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './AuthPages.css';
 
-const SignUp = () => {
+const Login = () => {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: ''
   });
@@ -26,10 +25,10 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      await signup(formData);
+      await login(formData);
       navigate('/feed');
     } catch (err) {
-      setError(err.message || 'An error occurred during signup.');
+      setError(err.message || 'Login failed.');
     } finally {
       setIsLoading(false);
     }
@@ -38,23 +37,10 @@ const SignUp = () => {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h2 className="auth-title">Create an Account</h2>
+        <h2 className="auth-title">Login</h2>
         {error && <div className="auth-error">{error}</div>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label htmlFor="name">Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              autoComplete="name"
-            />
-          </div>
-
           <div className="auth-field">
             <label htmlFor="email">Email</label>
             <input
@@ -77,25 +63,25 @@ const SignUp = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              minLength={6}
-              autoComplete="new-password"
+              autoComplete="current-password"
             />
           </div>
 
           <div className="auth-actions">
             <button type="submit" className="btn btn-primary" disabled={isLoading}>
-              {isLoading ? 'Signing up...' : 'Sign Up'}
+              {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </div>
         </form>
 
         <div className="auth-footer">
-          Already have an account?
-          <Link to="/login">Login</Link>
+          Don&apos;t have an account?
+          <Link to="/signup">Sign Up</Link>
         </div>
       </div>
     </div>
   );
 };
 
-export default SignUp;
+export default Login;
+
