@@ -21,7 +21,8 @@ class Complaint {
             severity = 'medium',
             imageUrl,
             latitude,
-            longitude
+            longitude,
+            whatsappOptIn = false
         } = complaintData;
 
         const complaintId = generateComplaintId();
@@ -31,15 +32,16 @@ class Complaint {
             INSERT INTO complaints (
                 complaint_id, name, phone, email, area, city, landmark,
                 issue_type, description, severity, image_url,
-                latitude, longitude, department, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'Pending')
+                latitude, longitude, department, status, whatsapp_opt_in
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'Pending', $15)
             RETURNING *
         `;
 
         const values = [
             complaintId, name, phone, email, area, city, landmark,
             issueType, description, severity, imageUrl,
-            latitude, longitude, department
+            latitude, longitude, department,
+            (whatsappOptIn === true || whatsappOptIn === 'true') ? 1 : 0
         ];
 
         const result = await pool.query(query, values);
