@@ -66,7 +66,7 @@ const STEPS = [
     {
         id: 'severity-input',
         selector: '[data-guide-id="severity-input"]',
-        text: 'Step 13. How serious is the issue? Use arrow keys to choose or click and press Enter.',
+        text: 'Step 13. How serious is the issue? Select an option by clicking on it.',
     },
     {
         id: 'duration-input',
@@ -76,17 +76,17 @@ const STEPS = [
     {
         id: 'volunteer-input',
         selector: '[data-guide-id="volunteer-input"]',
-        text: 'Step 15. Allow nearby volunteers to help? Select Yes or No to proceed.',
+        text: 'Step 15. Allow nearby volunteers to help? Select Yes or No.',
     },
     {
         id: 'updates-input',
         selector: '[data-guide-id="updates-input"]',
-        text: 'Step 16. Want updates on this issue? Select Yes or No to proceed.',
+        text: 'Step 16. Want updates on this issue? Select Yes or No.',
     },
     {
         id: 'consent-input',
         selector: '[data-guide-id="consent-input"]',
-        text: 'Step 17. Almost there. Check the box to verify your information and proceed.',
+        text: 'Step 17. Almost there. Check the box to verify your information.',
     },
     {
         id: 'submit-report',
@@ -96,7 +96,7 @@ const STEPS = [
     {
         id: 'issue-id-display',
         selector: '[data-guide-id="issue-id-display"]',
-        text: 'Step 19. Your complaint has been recorded and updated. This is your unique code. Please copy it now.',
+        text: 'Step 19. Your complaint has been recorded. This is your unique code. Please copy it now.',
     },
     {
         id: 'track-link',
@@ -121,26 +121,26 @@ const VoiceGuideAssistant = () => {
         });
     };
 
+    // 🎙️ Robust Speech Manager
     useEffect(() => {
-        if (!isRunning) return;
+        if (!isRunning || isCompleted) return;
         if (!('speechSynthesis' in window)) return;
 
-        // 🎙️ Robust Speech Manager
-        // We use a slightly longer delay (300ms) to ensure the previous cancel is fully finished
-        const speak = () => {
-            window.speechSynthesis.cancel();
-            
-            setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(step.text);
-                utterance.rate = 1.05; // Slightly slower for better clarity
-                utterance.pitch = 1;
-                window.speechSynthesis.speak(utterance);
-                console.log(`[Assistant] Speaking Step ${stepIndex + 1}: ${step.id}`);
-            }, 300);
-        };
+        // Cancel previous speech immediately
+        window.speechSynthesis.cancel();
 
-        speak();
-    }, [isRunning, step, stepIndex]);
+        // Speak without async delay to preserve browser's "user gesture" token
+        const utterance = new SpeechSynthesisUtterance(step.text);
+        utterance.rate = 1.0; 
+        utterance.pitch = 1;
+        
+        window.speechSynthesis.speak(utterance);
+        console.log(`[Assistant] Speaking: ${step.id}`);
+
+        return () => {
+            window.speechSynthesis.cancel();
+        };
+    }, [isRunning, stepIndex, isCompleted, step.text]);
 
     useEffect(() => {
         if (!isCompleted) return;
@@ -157,61 +157,63 @@ const VoiceGuideAssistant = () => {
         }, 300);
     }, [isCompleted]);
 
+    // 📍 High-Performance Pointer Tracking
     useEffect(() => {
-        document.querySelectorAll('.guide-highlight').forEach((el) => {
-            el.classList.remove('guide-highlight');
-        });
-
         if (!isRunning) {
-            setPointerPos({ ...pointerPos, visible: false });
+            setPointerPos(prev => ({ ...prev, visible: false }));
             return;
         }
 
-        let target = null;
-        let isCleaned = false;
-
-        const applyHighlight = () => {
-            if (isCleaned) return;
-            target = document.querySelector(step.selector);
+        let animationFrameId;
+        const updatePointer = () => {
+            const target = document.querySelector(step.selector);
             if (!target) {
                 setPointerPos(prev => ({ ...prev, visible: false }));
+                animationFrameId = requestAnimationFrame(updatePointer);
                 return;
             }
 
-            // Apply highlight and scroll
-            target.classList.add('guide-highlight');
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Ensure highlight is applied
+            if (!target.classList.contains('guide-highlight')) {
+                document.querySelectorAll('.guide-highlight').forEach(el => el.classList.remove('guide-highlight'));
+                target.classList.add('guide-highlight');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
 
-            // Calculate pointer position
             const rect = target.getBoundingClientRect();
             setPointerPos({
                 top: rect.top + window.scrollY + (rect.height / 2),
-                left: rect.left + window.scrollX - 40, // Position to the left of the box
+                left: rect.left + window.scrollX - 45,
                 visible: true
             });
 
-            // Focus the element
-            if (document.activeElement !== target) {
-                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+            // Focus management
+            if (document.activeElement !== target && isRunning) {
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
                     target.focus();
                 }
             }
+
+            animationFrameId = requestAnimationFrame(updatePointer);
         };
 
-        applyHighlight();
-        const timer = window.setInterval(applyHighlight, 350);
+        animationFrameId = requestAnimationFrame(updatePointer);
 
         return () => {
-            isCleaned = true;
-            window.clearInterval(timer);
-            if (target) target.classList.remove('guide-highlight');
+            cancelAnimationFrame(animationFrameId);
+            document.querySelectorAll('.guide-highlight').forEach(el => el.classList.remove('guide-highlight'));
         };
-    }, [isRunning, step]);
+    }, [isRunning, stepIndex, step.selector]);
 
     useEffect(() => {
         if (!isRunning) return;
 
+        let stepCompleted = false;
+
         const completeStep = () => {
+            if (stepCompleted) return; // Prevent double firing from click + change events
+            stepCompleted = true;
+
             if (isLastStep) {
                 setIsRunning(false);
                 setIsCompleted(true);
@@ -275,6 +277,7 @@ const VoiceGuideAssistant = () => {
             // Handle selection-based steps (No Enter required)
             if (['severity-input', 'volunteer-input', 'updates-input'].includes(step.id)) {
                 if (e.target.type === 'radio' && target.contains(e.target)) {
+                    // Wait for user to finish selection before moving to the next
                     setTimeout(completeStep, 300);
                 }
             } else if (step.id === 'issue-type') {
@@ -289,7 +292,7 @@ const VoiceGuideAssistant = () => {
                 if (['report-button', 'track-link'].includes(step.id)) {
                     completeStep();
                 }
-                // Submit button (Step 18) is handled by the Success Monitor above
+                // Submit button (Step 18) is handled by the Success Monitor.
             }
         };
 

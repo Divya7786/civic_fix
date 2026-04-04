@@ -14,7 +14,7 @@ const Navbar = ({ onOpenReport }) => {
           <Link to="/" className="nav-link">Home</Link>
           <Link to="/map" className="nav-link">Live Map</Link>
           <Link to="/track" className="nav-link" data-guide-id="track-link">Track Status</Link>
-          <Link to="/admin" className="nav-link">Admin</Link>
+          <Link to="/admin" className="nav-link admin-link-pill">Admin Portal</Link>
         </div>
         <div className="nav-actions">
           <button className="btn btn-primary nav-btn" onClick={onOpenReport} data-guide-id="report-button">

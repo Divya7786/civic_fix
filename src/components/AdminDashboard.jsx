@@ -337,9 +337,9 @@ const AdminDashboard = () => {
                                                     <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
                                                         <h4 style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.5rem' }}>Attached Evidence</h4>
                                                         <img 
-                                                            src={`${API_URL.replace('/api', '')}${complaint.image_url}`} 
+                                                            src={`${API_BASE.replace('/api', '')}${complaint.image_url}`} 
                                                             alt="Complaint evidence" 
-                                                            style={{ maxWidth: '400px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                                                            style={{ maxWidth: '400px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                                                         />
                                                     </div>
                                                 )}
