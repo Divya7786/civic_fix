@@ -19,6 +19,9 @@ class Complaint {
             issueType,
             description,
             severity = 'medium',
+            duration,
+            allowVolunteers = 'no',
+            wantUpdates = 'no',
             imageUrl,
             latitude,
             longitude
@@ -30,15 +33,17 @@ class Complaint {
         const query = `
             INSERT INTO complaints (
                 complaint_id, name, phone, email, area, city, landmark,
-                issue_type, description, severity, image_url,
+                issue_type, description, severity, duration,
+                allow_volunteers, want_updates, image_url,
                 latitude, longitude, department, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'Pending')
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'Pending')
             RETURNING *
         `;
 
         const values = [
             complaintId, name, phone, email, area, city, landmark,
-            issueType, description, severity, imageUrl,
+            issueType, description, severity, duration,
+            allowVolunteers, wantUpdates, imageUrl,
             latitude, longitude, department
         ];
 

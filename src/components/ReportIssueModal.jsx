@@ -82,6 +82,9 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
     formDataToSend.append('issueType', formData.issueType);
     formDataToSend.append('description', formData.description);
     formDataToSend.append('severity', formData.severity);
+    formDataToSend.append('duration', formData.duration);
+    formDataToSend.append('allowVolunteers', formData.volunteer);
+    formDataToSend.append('wantUpdates', formData.updates);
     formDataToSend.append('latitude', position[0]);
     formDataToSend.append('longitude', position[1]);
     
@@ -101,6 +104,10 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
       const responseData = await response.json();
 
       if (!response.ok) {
+        // If there are specific validation details, join them into a readable message
+        if (responseData.error?.details && Array.isArray(responseData.error.details)) {
+          throw new Error(`${responseData.error.message}: ${responseData.error.details.join(', ')}`);
+        }
         throw new Error(responseData.error?.message || 'Failed to submit complaint');
       }
 
@@ -153,9 +160,9 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
           <div className="success-state text-center">
             <CheckCircle size={64} className="text-secondary mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Thank you for reporting!</h2>
-            <p className="text-muted mb-6">Your issue ID is: <strong>{issueId}</strong></p>
+            <p className="text-muted mb-6">Your issue code is: <strong data-guide-id="issue-id-display" style={{ padding: '0 4px', background: '#e0f2fe', borderRadius: '4px' }}>{issueId}</strong></p>
             <p className="text-sm text-muted mb-8">
-              We have received your report and notified the relevant department. You will receive updates shortly.
+              Your complaint has been recorded and updated. Please copy the code above and visit the track page to check for updates.
             </p>
             <button className="btn btn-primary" onClick={resetForm}>Close Window</button>
           </div>
@@ -187,7 +194,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                   </div>
                   <div>
                     <label>Preferred Language</label>
-                    <select name="language" value={formData.language} onChange={handleChange}>
+                    <select name="language" value={formData.language} onChange={handleChange} data-guide-id="language-input">
                       <option>English</option>
                       <option>Tamil</option>
                       <option>Hindi</option>

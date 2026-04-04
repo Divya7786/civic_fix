@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
 
+const API_URL = 'http://localhost:3000/api';
+
 // ✅ Fix marker icons on all machines
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -24,14 +26,14 @@ const createColoredIcon = (severity) =>
         className: '',
         html: `<div style="
       background-color: ${getSeverityColor(severity)};
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 0 6px rgba(0,0,0,0.4);
+      border: 3px solid white;
+      box-shadow: 0 0 8px rgba(0,0,0,0.4);
     "></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
     });
 
 // 📍 Auto-center map to user's location
@@ -44,61 +46,114 @@ const AutoCenter = ({ userLocation }) => {
 };
 
 const LiveMap = () => {
-    const [issues] = useState(() => {
-        const stored = JSON.parse(localStorage.getItem('civicfix_issues') || '[]');
-        return stored.filter(issue => 
-            issue.position && 
-            Array.isArray(issue.position) && 
-            issue.position.length === 2 &&
-            !isNaN(issue.position[0]) && 
-            !isNaN(issue.position[1])
-        );
-    });
-
+    const [issues, setIssues] = useState([]);
     const [userLocation, setUserLocation] = useState([20.5937, 78.9629]); // Default: India center
+    const [loading, setLoading] = useState(true);
 
-    // 📡 Get user's GPS location
+    // 📡 Fetch global complaints from backend
+    const fetchGlobalComplaints = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/complaints`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Map backend fields to the map format
+                const globalIssues = data.data
+                    .filter(c => c.latitude && c.longitude)
+                    .map(c => ({
+                        id: c.complaint_id,
+                        title: c.issue_type,
+                        description: c.description,
+                        area: c.area,
+                        city: c.city,
+                        severity: c.severity,
+                        status: c.status,
+                        imageUrl: c.image_url,
+                        position: [c.latitude, c.longitude],
+                        submittedAt: c.created_at
+                    }));
+                setIssues(globalIssues);
+            }
+        } catch (error) {
+            console.error('Failed to fetch global complaints:', error);
+            // Fallback: Use local reports if backend fails
+            const stored = JSON.parse(localStorage.getItem('civicfix_issues') || '[]');
+            setIssues(stored);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 📍 Get user's GPS location and fetch complaints
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
             (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
             () => console.log('Location access denied, using default.')
         );
+        fetchGlobalComplaints();
     }, []);
 
     return (
-
         <div style={{ padding: '20px' }}>
-            <h2>Live Map</h2>
-
-            {/* Legend */}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '10px', fontSize: '14px' }}>
-                <span>🔴 High severity</span>
-                <span>🟠 Medium severity</span>
-                <span>🟢 Low severity</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0 }}>Live Map</h2>
+                <button 
+                    onClick={fetchGlobalComplaints} 
+                    style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '13px' }}
+                >
+                    {loading ? 'Refreshing...' : '🔄 Refresh Map'}
+                </button>
             </div>
 
-            {issues.length === 0 && (
-                <p style={{ color: '#888', marginBottom: '10px', fontSize: '14px' }}>
-                    No issues reported yet. Submit a report to see it on the map!
-                </p>
-            )}
+            {/* Legend */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', fontSize: '13px', fontWeight: '500' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#e53e3e' }}></div> High
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#dd6b20' }}></div> Medium
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#38a169' }}></div> Low
+                </span>
+            </div>
 
-            <MapContainer center={userLocation} zoom={13} style={{ height: '500px', width: '100%' }}>
+            <MapContainer center={userLocation} zoom={13} style={{ height: '550px', width: '100%', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
                 <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution="© OpenStreetMap contributors"
                 />
                 <AutoCenter userLocation={userLocation} />
 
-                {issues.map((issue, idx) => (
-                    <Marker key={idx} position={issue.position} icon={createColoredIcon(issue.severity)}>
+                {issues.map((issue) => (
+                    <Marker key={issue.id} position={issue.position} icon={createColoredIcon(issue.severity)}>
                         <Popup>
-                            <strong>{issue.title}</strong><br />
-                            📍 {issue.area}, {issue.city}<br />
-                            📝 {issue.description || 'No description'}<br />
-                            ⚠️ Severity: <b style={{ color: getSeverityColor(issue.severity) }}>{issue.severity}</b><br />
-                            🔖 Status: <b>{issue.status}</b><br />
-                            🕐 {new Date(issue.submittedAt).toLocaleDateString()}
+                            <div style={{ minWidth: '180px' }}>
+                                <strong style={{ fontSize: '14px' }}>{issue.title}</strong>
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                    📍 {issue.area}, {issue.city}<br />
+                                    🕐 {new Date(issue.submittedAt).toLocaleDateString()}
+                                </div>
+                                <p style={{ fontSize: '13px', margin: '8px 0', lineHeigh: '1.4' }}>{issue.description}</p>
+                                
+                                {issue.imageUrl && (
+                                    <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+                                        <img 
+                                            src={`http://localhost:3000${issue.imageUrl}`} 
+                                            alt="Issue proof" 
+                                            style={{ width: '100%', borderRadius: '4px', height: '100px', objectFit: 'cover', border: '1px solid #eee' }}
+                                        />
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
+                                    <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', fontSize: '11px', fontWeight: 'bold' }}>
+                                        {issue.status}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>#{issue.id}</span>
+                                </div>
+                            </div>
                         </Popup>
                     </Marker>
                 ))}

@@ -1,21 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, MoveUpRight, Navigation } from 'lucide-react';
 import './VoiceGuideAssistance.css';
 
 const STEPS = [
     {
         id: 'report-button',
         selector: '[data-guide-id="report-button"]',
-        text: 'Step 1. Click the blue Report an Issue button to open the report form.',
+        text: 'Step 1. Starting the guide. Please click the blue "Report an Issue" button to open the form.',
     },
     {
         id: 'full-name',
         selector: '[data-guide-id="full-name"]',
-        text: 'Step 2. Please enter your full name and press Enter.',
+        text: 'Step 2. Personal details. Type your full name and press Enter.',
     },
     {
         id: 'phone-input',
         selector: '[data-guide-id="phone-input"]',
-        text: 'Step 3. Enter your 10-digit phone number and press Enter.',
+        text: 'Step 3. Enter your 10-digit mobile number and press Enter.',
     },
     {
         id: 'email-input',
@@ -23,69 +24,84 @@ const STEPS = [
         text: 'Step 4. Enter your email address and press Enter.',
     },
     {
+        id: 'language-input',
+        selector: '[data-guide-id="language-input"]',
+        text: 'Step 5. Select your preferred language from the list and press Enter.',
+    },
+    {
         id: 'maps-link',
         selector: '[data-guide-id="maps-link"]',
-        text: 'Step 5. Share a Google Maps link of the location (Optional). Press Enter to proceed.',
+        text: 'Step 6. Location. If you have a Google Maps link, paste it here, or just press Enter to skip.',
     },
     {
         id: 'area-input',
         selector: '[data-guide-id="area-input"]',
-        text: 'Step 6. Enter the area or locality name and press Enter.',
+        text: 'Step 7. Type the name of your area or locality and press Enter.',
     },
     {
         id: 'city-input',
         selector: '[data-guide-id="city-input"]',
-        text: 'Step 7. Enter the city name and press Enter.',
+        text: 'Step 8. Type the name of your city and press Enter.',
     },
     {
         id: 'landmark-input',
         selector: '[data-guide-id="landmark-input"]',
-        text: 'Step 8. Enter a nearby landmark (Optional) and press Enter.',
+        text: 'Step 9. Enter a nearby landmark (optional) and press Enter.',
     },
     {
         id: 'issue-type',
         selector: '[data-guide-id="issue-type"]',
-        text: 'Step 9. Select the issue type from the dropdown and press Enter to confirm.',
+        text: 'Step 10. Issue details. Select the type of problem you are reporting and press Enter.',
     },
     {
         id: 'description',
         selector: '[data-guide-id="description"]',
-        text: 'Step 10. Describe the problem in the text box and press Enter.',
+        text: 'Step 11. Describe the problem in your own words so we understand it better. Press Enter when done.',
     },
     {
         id: 'file-upload',
         selector: '[data-guide-id="file-upload"]',
-        text: 'Step 11. Upload a photo (Optional). Press Enter to proceed.',
+        text: 'Step 12. Upload a photo of the issue (optional). Once selected, or to skip, press Enter.',
     },
     {
         id: 'severity-input',
         selector: '[data-guide-id="severity-input"]',
-        text: 'Step 12. Select how serious the issue is and press Enter.',
+        text: 'Step 13. How serious is the issue? Use arrow keys to choose or click and press Enter.',
     },
     {
         id: 'duration-input',
         selector: '[data-guide-id="duration-input"]',
-        text: 'Step 13. How long has this issue existed? Enter details and press Enter.',
+        text: 'Step 14. How long has this issue existed? Enter duration and press Enter.',
     },
     {
         id: 'volunteer-input',
         selector: '[data-guide-id="volunteer-input"]',
-        text: 'Step 14. Allow nearby volunteers to help? Click Yes or No to proceed.',
+        text: 'Step 15. Allow nearby volunteers to help? Select Yes or No to proceed.',
     },
     {
         id: 'updates-input',
         selector: '[data-guide-id="updates-input"]',
-        text: 'Step 15. Want updates on this issue? Click Yes or No to proceed.',
+        text: 'Step 16. Want updates on this issue? Select Yes or No to proceed.',
     },
     {
         id: 'consent-input',
         selector: '[data-guide-id="consent-input"]',
-        text: 'Step 16. Verify the info and consent by checking the box to proceed.',
+        text: 'Step 17. Almost there. Check the box to verify your information and proceed.',
     },
     {
         id: 'submit-report',
         selector: '[data-guide-id="submit-report"]',
-        text: 'Step 17. Finally, click Submit Report or press Enter.',
+        text: 'Step 18. Final step. Click "Submit Report" or press Enter to send your request.',
+    },
+    {
+        id: 'issue-id-display',
+        selector: '[data-guide-id="issue-id-display"]',
+        text: 'Step 19. Your complaint has been recorded and updated. This is your unique code. Please copy it now.',
+    },
+    {
+        id: 'track-link',
+        selector: '[data-guide-id="track-link"]',
+        text: 'Step 20. Last step. Click "Track Status" in the menu above anytime to check for updates. The guide is now complete.',
     },
 ];
 
@@ -93,6 +109,7 @@ const VoiceGuideAssistant = () => {
     const [isRunning, setIsRunning] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
     const [isCompleted, setIsCompleted] = useState(false);
+    const [pointerPos, setPointerPos] = useState({ top: 0, left: 0, visible: false });
 
     const step = useMemo(() => STEPS[stepIndex], [stepIndex]);
     const isLastStep = stepIndex === STEPS.length - 1;
@@ -121,7 +138,7 @@ const VoiceGuideAssistant = () => {
 
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(
-            'Great job. Your report is ready to be submitted. The guide is completed.'
+            'The guide is now complete. You can track your complaint status anytime from the top menu.'
         );
         utterance.rate = 1;
         utterance.pitch = 1;
@@ -133,16 +150,40 @@ const VoiceGuideAssistant = () => {
             el.classList.remove('guide-highlight');
         });
 
-        if (!isRunning) return;
+        if (!isRunning) {
+            setPointerPos({ ...pointerPos, visible: false });
+            return;
+        }
+
         let target = null;
         let isCleaned = false;
 
         const applyHighlight = () => {
             if (isCleaned) return;
             target = document.querySelector(step.selector);
-            if (!target) return;
+            if (!target) {
+                setPointerPos(prev => ({ ...prev, visible: false }));
+                return;
+            }
+
+            // Apply highlight and scroll
             target.classList.add('guide-highlight');
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Calculate pointer position
+            const rect = target.getBoundingClientRect();
+            setPointerPos({
+                top: rect.top + window.scrollY + (rect.height / 2),
+                left: rect.left + window.scrollX - 40, // Position to the left of the box
+                visible: true
+            });
+
+            // Focus the element
+            if (document.activeElement !== target) {
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+                    target.focus();
+                }
+            }
         };
 
         applyHighlight();
@@ -175,14 +216,31 @@ const VoiceGuideAssistant = () => {
                     e.preventDefault();
                 }
 
-                // Phone Validation
-                if (step.id === 'phone-input' && target) {
-                    const digits = target.value.replace(/\D/g, '');
-                    if (digits.length < 10) {
-                        const utterance = new SpeechSynthesisUtterance('Please enter at least 10 digits.');
-                        window.speechSynthesis.speak(utterance);
+                // Validation checks
+                if (target) {
+                    const value = target.value.trim();
+                    if (step.id === 'full-name' && !value) {
+                        window.speechSynthesis.speak(new SpeechSynthesisUtterance('Please enter your name.'));
                         return;
                     }
+                    if (step.id === 'phone-input') {
+                        const digits = value.replace(/\D/g, '');
+                        if (digits.length < 10) {
+                            window.speechSynthesis.speak(new SpeechSynthesisUtterance('Phone number must be at least 10 digits.'));
+                            return;
+                        }
+                    }
+                    if (step.id === 'description' && !value) {
+                        window.speechSynthesis.speak(new SpeechSynthesisUtterance('Please provide a short description.'));
+                        return;
+                    }
+                }
+
+                // Handle post-submit logic
+                if (step.id === 'submit-report') {
+                    // Give the backend some time to process before checking for the success screen
+                    setTimeout(completeStep, 1500); 
+                    return;
                 }
 
                 completeStep();
@@ -194,21 +252,21 @@ const VoiceGuideAssistant = () => {
             if (!target) return;
 
             // Handle selection-based steps (No Enter required)
-            if (step.id === 'volunteer-input' || step.id === 'updates-input') {
-                // If user clicks a radio input within the target container
+            if (['volunteer-input', 'updates-input'].includes(step.id)) {
                 if (e.target.type === 'radio' && target.contains(e.target)) {
-                    // Small delay to ensure the radio selection visual registers for the user
                     setTimeout(completeStep, 300);
                 }
             } else if (step.id === 'consent-input') {
-                // If user checks the consent checkbox
                 if (e.target.type === 'checkbox' && e.target.checked && target === e.target) {
                     setTimeout(completeStep, 300);
                 }
             } else if (target.contains(e.target)) {
-                // Original click-to-advance logic for buttons
-                if (step.id === 'report-button' || step.id === 'submit-report') {
-                    completeStep();
+                if (['report-button', 'submit-report', 'track-link'].includes(step.id)) {
+                    if (step.id === 'submit-report') {
+                        setTimeout(completeStep, 1500);
+                    } else {
+                        completeStep();
+                    }
                 }
             }
         };
@@ -246,24 +304,39 @@ const VoiceGuideAssistant = () => {
     };
 
     return (
-        <div className="voice-guide-widget">
-            <h3>Voice Assistant Guide</h3>
-            <p className="guide-step-text">
-                {isRunning
-                    ? step.text
-                    : isCompleted
-                        ? 'Guide completed. Your report is ready.'
-                        : 'Press Start Guide to hear instructions.'}
-            </p>
-            <div className="guide-actions">
-                <button type="button" className="btn btn-primary" onClick={startGuide}>
-                    Start Guide
-                </button>
-                <button type="button" className="btn" onClick={stopGuide} disabled={!isRunning}>
-                    Stop
-                </button>
+        <>
+            {pointerPos.visible && (
+                <div 
+                    className="guide-pointer" 
+                    style={{ 
+                        top: `${pointerPos.top}px`, 
+                        left: `${pointerPos.left}px` 
+                    }}
+                >
+                    <Navigation size={32} fill="#2563eb" color="#fff" strokeWidth={2} />
+                    <span className="pointer-text">HERE</span>
+                </div>
+            )}
+            
+            <div className="voice-guide-widget">
+                <h3>Voice Assistant Guide</h3>
+                <p className="guide-step-text">
+                    {isRunning
+                        ? step.text
+                        : isCompleted
+                            ? 'Guide completed. Your report is ready.'
+                            : 'Press Start Guide to hear instructions.'}
+                </p>
+                <div className="guide-actions">
+                    <button type="button" className="btn btn-primary" onClick={startGuide}>
+                        Start Guide
+                    </button>
+                    <button type="button" className="btn" onClick={stopGuide} disabled={!isRunning}>
+                        Stop
+                    </button>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 
