@@ -1,19 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, AlertCircle, CheckCircle, Clock, MapPin, Phone, User, Calendar } from 'lucide-react';
 import './TrackComplaint.css';
 
 import { API_BASE } from '../services/api';
 
 const TrackComplaint = () => {
+    const [searchParams] = useSearchParams();
     const [complaintId, setComplaintId] = useState('');
     const [complaint, setComplaint] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
+    useEffect(() => {
+        const idFromUrl = searchParams.get('id');
+        if (idFromUrl && !complaintId) {
+            setComplaintId(idFromUrl);
+            searchById(idFromUrl);
+        }
+    }, [searchParams]);
 
-        if (!complaintId.trim()) {
+    const searchById = async (id) => {
+        const searchId = (id || complaintId).trim();
+        if (!searchId) {
             setError('Please enter a complaint ID');
             return;
         }
@@ -23,7 +32,7 @@ const TrackComplaint = () => {
         setComplaint(null);
 
         try {
-            const response = await fetch(`${API_BASE}/complaints/${complaintId.trim()}`);
+            const response = await fetch(`${API_BASE}/complaints/${searchId}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -36,6 +45,11 @@ const TrackComplaint = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        searchById();
     };
 
     const getStatusIcon = (status) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload, CheckCircle, MapPin } from 'lucide-react';
 import './ReportIssueModal.css';
 import { useAuth } from '../context/AuthContext';
@@ -14,13 +14,14 @@ const geocodeAddress = async (area, city) => {
   return null;
 };
 
-const ReportIssueModal = ({ isOpen, onClose }) => {
+const ReportIssueModal = ({ isOpen, onClose, prefillData }) => {
   const { token } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [issueId, setIssueId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [aiPrefilled, setAiPrefilled] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -37,6 +38,21 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
     volunteer: 'yes',
     updates: 'yes',
   });
+
+  useEffect(() => {
+    if (prefillData && isOpen) {
+      setFormData(prev => ({
+        ...prev,
+        issueType: prefillData.issueType || prev.issueType,
+        area: prefillData.area || prev.area,
+        city: prefillData.city || prev.city,
+        landmark: prefillData.landmark || prev.landmark,
+        severity: prefillData.severity || prev.severity,
+        description: prefillData.description || prev.description,
+      }));
+      setAiPrefilled(true);
+    }
+  }, [prefillData, isOpen]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,7 +100,8 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
     formDataToSend.append('severity', formData.severity);
     formDataToSend.append('latitude', position[0]);
     formDataToSend.append('longitude', position[1]);
-    
+    formDataToSend.append('whatsappOptIn', formData.updates === 'yes' ? 'true' : 'false');
+
     if (selectedFile) {
       formDataToSend.append('image', selectedFile);
     }
@@ -137,6 +154,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
   const resetForm = () => {
     setIsSubmitted(false);
     setSelectedFile(null);
+    setAiPrefilled(false);
     onClose();
   };
 
@@ -155,7 +173,8 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
             <h2 className="text-2xl font-bold mb-2">Thank you for reporting!</h2>
             <p className="text-muted mb-6">Your issue ID is: <strong>{issueId}</strong></p>
             <p className="text-sm text-muted mb-8">
-              We have received your report and notified the relevant department. You will receive updates shortly.
+              We have received your report and notified the relevant department.
+              {formData.updates === 'yes' && ' You will receive status updates on WhatsApp.'}
             </p>
             <button className="btn btn-primary" onClick={resetForm}>Close Window</button>
           </div>
@@ -164,6 +183,12 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
             <div className="modal-header">
               <h2>Report an Issue</h2>
               <p className="text-muted text-sm">Help us fix the community by reporting local problems.</p>
+              {aiPrefilled && (
+                <div className="ai-prefill-banner">
+                  <span className="ai-prefill-badge">AI</span>
+                  Some fields were pre-filled by CivicFix AI. Please review before submitting.
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="report-form">
