@@ -126,20 +126,21 @@ const VoiceGuideAssistant = () => {
         if (!('speechSynthesis' in window)) return;
 
         // 🎙️ Robust Speech Manager
+        // We use a slightly longer delay (300ms) to ensure the previous cancel is fully finished
         const speak = () => {
             window.speechSynthesis.cancel();
             
-            // Short delay to ensure browser speech engine is ready after cancel
             setTimeout(() => {
                 const utterance = new SpeechSynthesisUtterance(step.text);
-                utterance.rate = 1.1; 
+                utterance.rate = 1.05; // Slightly slower for better clarity
                 utterance.pitch = 1;
                 window.speechSynthesis.speak(utterance);
-            }, 150);
+                console.log(`[Assistant] Speaking Step ${stepIndex + 1}: ${step.id}`);
+            }, 300);
         };
 
         speak();
-    }, [isRunning, step]);
+    }, [isRunning, step, stepIndex]);
 
     useEffect(() => {
         if (!isCompleted) return;
@@ -153,7 +154,7 @@ const VoiceGuideAssistant = () => {
             utterance.rate = 1;
             utterance.pitch = 1;
             window.speechSynthesis.speak(utterance);
-        }, 150);
+        }, 300);
     }, [isCompleted]);
 
     useEffect(() => {
