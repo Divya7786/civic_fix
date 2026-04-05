@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload, CheckCircle, MapPin, Users } from 'lucide-react';
 import './ReportIssueModal.css';
 import { useAuth } from '../context/AuthContext';
@@ -126,19 +126,27 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
   const handleJoin = async (issueId) => {
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/complaints/${issueId}/join`, { method: 'POST' });
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/complaints/${issueId}/join`, {
+        method: 'POST',
+        headers,
+      });
       if (!res.ok) throw new Error('Failed to join issue');
       
       const data = await res.json();
       setIssueId(data.data.complaint_id);
       setIsSubmitted(true);
       setView('success');
+
+      // Notify My Complaints page to refresh and show the joined entry
+      window.dispatchEvent(new Event('civicfix:complaint-joined'));
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
