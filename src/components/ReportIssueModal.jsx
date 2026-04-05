@@ -31,6 +31,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [nearbyIssues, setNearbyIssues] = useState([]);
   const [locationName, setLocationName] = useState('');
+  const [locationError, setLocationError] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -53,30 +54,73 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       detectAndFetchNearby();
     } else {
-      setView('form'); // Reset on close
+      setView('form');
+      setLocationError(false);
     }
   }, [isOpen]);
 
   const detectAndFetchNearby = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationError(true);
+      return;
+    }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        await fetchNearby(lat, lng);
+      },
+      (err) => {
+        console.warn('Geolocation denied or failed:', err);
+        setLocationError(true);
+      },
+      { timeout: 5000 }
+    );
+  };
 
-      try {
-        const response = await fetch(`${API_BASE}/complaints/nearby?lat=${lat}&lng=${lng}&radiusKm=2`);
-        const data = await response.json();
+  const fetchNearby = async (lat, lng) => {
+    try {
+      const response = await fetch(`${API_BASE}/complaints/nearby?lat=${lat}&lng=${lng}&radiusKm=5`);
+      const data = await response.json();
 
-        if (data.success && data.data.length > 0) {
-          setNearbyIssues(data.data.slice(0, 3));
-          setLocationName(data.data[0].area || 'your area');
-          setView('recommendation');
-        }
-      } catch (err) {
-        console.error('Nearby fetch error:', err);
+      if (data.success && data.data.length > 0) {
+        setNearbyIssues(data.data.slice(0, 3));
+        setLocationName(data.data[0].area || 'your area');
+        setView('recommendation');
+      } else {
+        setView('form'); // No issues nearby, skip to form
       }
-    });
+    } catch (err) {
+      console.error('Nearby fetch error:', err);
+      setView('form');
+    }
+  };
+
+  const fetchByAreaName = async (area) => {
+    if (!area) return;
+    setSubmitting(true);
+    try {
+      // For demo/fallback, we just search for issues starting with that area name
+      const response = await fetch(`${API_BASE}/complaints`);
+      const data = await response.json();
+      if (data.success) {
+        const matches = data.data.filter(i => i.area.toLowerCase().includes(area.toLowerCase())).slice(0, 3);
+        if (matches.length > 0) {
+          setNearbyIssues(matches);
+          setLocationName(area);
+          setView('recommendation');
+          setLocationError(false);
+        } else {
+          setError('No reports found in this area. Proceeding to new report...');
+          setTimeout(() => setView('form'), 1500);
+        }
+      }
+    } catch (err) {
+      setError('Search failed.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleJoin = async (issueId) => {
@@ -276,6 +320,41 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                 data-guide-id="report-new-issue"
               >
                 No, Report a Different Issue
+              </button>
+            </div>
+          </div>
+        ) : (locationError && view === 'form') ? (
+          <div className="recommendation-view animate-fade-in-up text-center" style={{ padding: '2rem' }}>
+            <MapPin size={48} className="text-muted mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Check for nearby reports</h3>
+            <p className="text-muted mb-6">GPS is disabled. Type your area to see if this issue was already reported.</p>
+            
+            <div className="form-group mb-6">
+              <input 
+                type="text" 
+                placeholder="e.g. Anna Nagar" 
+                className="text-center"
+                style={{ fontSize: '1.1rem', padding: '1rem' }}
+                onKeyDown={(e) => e.key === 'Enter' && fetchByAreaName(e.target.value)}
+              />
+              <button 
+                className="btn btn-secondary mt-4 w-full"
+                style={{ width: '100%' }}
+                onClick={(e) => {
+                  const input = e.currentTarget.previousSibling;
+                  fetchByAreaName(input.value);
+                }}
+              >
+                Search Nearby Issues
+              </button>
+            </div>
+            
+            <div className="recommendation-actions mt-8">
+              <button 
+                className="btn-skip-recommendation" 
+                onClick={() => { setView('form'); setLocationError(false); }}
+              >
+                Skip and Report New Issue
               </button>
             </div>
           </div>
