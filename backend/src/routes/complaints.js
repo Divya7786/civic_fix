@@ -9,6 +9,7 @@ const {
     getNearbyComplaints,
     updateComplaintStatus,
     assignComplaint,
+    joinComplaint,
     deleteComplaint
 } = require('../controllers/complaintController');
 
@@ -40,6 +41,9 @@ router.get('/', getAllComplaints);
 
 // 6. PUT /complaints/:id - Update status (Pending → In Progress → Resolved)
 router.put('/:id', validateStatusUpdate, updateComplaintStatus);
+
+// 7. POST /complaints/:id/join - Join existing complaint
+router.post('/:id/join', joinComplaint);
 
 // 7. POST /assign - Assign complaint to department
 // (Note: This is mounted at /api/assign in server.js)

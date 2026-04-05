@@ -235,23 +235,23 @@ const assignComplaint = async (req, res, next) => {
 };
 
 /**
- * Delete complaint (admin only)
- * DELETE /complaints/:id
+ * Join an existing complaint (increment supporter count)
+ * POST /complaints/:id/join
  */
-const deleteComplaint = async (req, res, next) => {
+const joinComplaint = async (req, res, next) => {
     try {
         const { id } = req.params;
         const internalId = parseInt(id, 10);
-
+        
         if (isNaN(internalId)) {
             const error = new Error('Invalid complaint ID');
             error.statusCode = 400;
             throw error;
         }
 
-        const deleted = await Complaint.delete(internalId);
+        const complaint = await Complaint.join(internalId);
 
-        if (!deleted) {
+        if (!complaint) {
             const error = new Error('Complaint not found');
             error.statusCode = 404;
             throw error;
@@ -259,7 +259,7 @@ const deleteComplaint = async (req, res, next) => {
 
         res.json({
             success: true,
-            message: 'Complaint deleted successfully'
+            data: complaint
         });
     } catch (err) {
         next(err);
@@ -274,5 +274,6 @@ module.exports = {
     getAllComplaints,
     updateComplaintStatus,
     assignComplaint,
+    joinComplaint,
     deleteComplaint
 };

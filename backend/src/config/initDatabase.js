@@ -22,6 +22,7 @@ const initDatabase = async () => {
             longitude REAL,
             status TEXT DEFAULT 'Pending',
             department TEXT DEFAULT 'General Administration',
+            supporter_count INTEGER DEFAULT 1,
             user_id INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

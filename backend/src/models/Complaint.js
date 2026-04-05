@@ -209,6 +209,22 @@ class Complaint {
     }
 
     /**
+     * Join an existing complaint (increment supporter count)
+     * @param {number} id - Complaint internal ID
+     * @returns {Object} Updated complaint
+     */
+    static async join(id) {
+        const query = `
+            UPDATE complaints
+            SET supporter_count = supporter_count + 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING *
+        `;
+        const result = await pool.query(query, [id]);
+        return result.rows[0] || null;
+    }
+
+    /**
      * Delete complaint
      * @param {number} id - Complaint internal ID
      * @returns {boolean} Success status

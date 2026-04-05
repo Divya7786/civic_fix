@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Upload, CheckCircle, MapPin } from 'lucide-react';
+import { X, Upload, CheckCircle, MapPin, Users } from 'lucide-react';
 import './ReportIssueModal.css';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../services/api';
@@ -23,11 +23,14 @@ const geocodeAddress = async (area, city) => {
 
 const ReportIssueModal = ({ isOpen, onClose }) => {
   const { token } = useAuth();
+  const [view, setView] = useState('form'); // 'recommendation', 'form', 'success'
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [issueId, setIssueId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [nearbyIssues, setNearbyIssues] = useState([]);
+  const [locationName, setLocationName] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -44,6 +47,54 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
     volunteer: 'yes',
     updates: 'yes',
   });
+
+  // 🌍 Detect location and fetch nearby issues on open
+  useEffect(() => {
+    if (isOpen) {
+      detectAndFetchNearby();
+    } else {
+      setView('form'); // Reset on close
+    }
+  }, [isOpen]);
+
+  const detectAndFetchNearby = () => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      try {
+        const response = await fetch(`${API_BASE}/complaints/nearby?lat=${lat}&lng=${lng}&radiusKm=2`);
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+          setNearbyIssues(data.data.slice(0, 3));
+          setLocationName(data.data[0].area || 'your area');
+          setView('recommendation');
+        }
+      } catch (err) {
+        console.error('Nearby fetch error:', err);
+      }
+    });
+  };
+
+  const handleJoin = async (issueId) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/complaints/${issueId}/join`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to join issue');
+      
+      const data = await res.json();
+      setIssueId(data.data.complaint_id);
+      setIsSubmitted(true);
+      setView('success');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -146,6 +197,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
       window.dispatchEvent(new Event('civicfix:complaint-created'));
 
       setIsSubmitted(true);
+      setView('success');
     } catch (err) {
       console.error('Submission Error:', err);
       // Specifically handle the "Load failed" type error
@@ -160,6 +212,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
 
   const resetForm = () => {
     setIsSubmitted(false);
+    setView('form');
     setSelectedFile(null);
     onClose();
   };
@@ -173,7 +226,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
           <X size={24} />
         </button>
 
-        {isSubmitted ? (
+        {view === 'success' ? (
           <div className="success-state text-center">
             <CheckCircle size={64} className="text-secondary mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Thank you for reporting!</h2>
@@ -183,7 +236,50 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
             </p>
             <button className="btn btn-primary" onClick={resetForm}>Close Window</button>
           </div>
-        ) : (
+        ) : view === 'recommendation' ? (
+          <div className="recommendation-view animate-fade-in-up">
+            <div className="recommendation-header">
+              <MapPin size={48} className="text-secondary mx-auto mb-4" />
+              <h3 data-guide-id="recommendation-title">Is your problem the same as any of these?</h3>
+              <p>We found {nearbyIssues.length} issues already reported near {locationName}.</p>
+            </div>
+
+            <div className="issues-list">
+              {nearbyIssues.map((issue) => (
+                <div key={issue.id} className="issue-card" data-guide-id={`issue-card-${issue.id}`}>
+                  <div className="issue-info">
+                    <h4>{issue.issue_type}</h4>
+                    <div className="issue-details">
+                      <span className="issue-tag">{issue.landmark || issue.area}</span>
+                      <span className="issue-tag">
+                        <Users size={14} className="text-secondary" />
+                        <span className="supporter-count">{issue.supporter_count || 1} Supporters</span>
+                      </span>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn-join" 
+                    onClick={() => handleJoin(issue.id)}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Joining...' : 'Yes, Join This'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="recommendation-actions">
+              <p className="text-sm text-muted">None of these match your problem?</p>
+              <button 
+                className="btn-skip-recommendation" 
+                onClick={() => setView('form')}
+                data-guide-id="report-new-issue"
+              >
+                No, Report a Different Issue
+              </button>
+            </div>
+          </div>
+        ) : view === 'form' ? (
           <>
             <div className="modal-header">
               <h2>Report an Issue</h2>
@@ -340,7 +436,7 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
               </div>
             </form>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
